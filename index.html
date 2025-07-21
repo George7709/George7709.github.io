@@ -70,7 +70,34 @@
             if (++count < speed) return;
             count = 0;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw realistic grass background
+            // Gradient base
+            let grassGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grassGradient.addColorStop(0, '#5fa147');
+            grassGradient.addColorStop(1, '#3e6b1a');
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Random grass blades
+            for (let i = 0; i < 200; i++) {
+                let gx = Math.random() * canvas.width;
+                let gy = Math.random() * canvas.height;
+                let bladeHeight = 8 + Math.random() * 8;
+                let bladeLean = (Math.random() - 0.5) * 4;
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = Math.random() > 0.5 ? '#7ec850' : '#4e8c2b';
+                ctx.lineWidth = 1 + Math.random();
+                ctx.moveTo(gx, gy);
+                ctx.bezierCurveTo(
+                    gx + bladeLean, gy - bladeHeight / 2,
+                    gx + bladeLean * 2, gy - bladeHeight,
+                    gx, gy - bladeHeight
+                );
+                ctx.stroke();
+                ctx.restore();
+            }
+
             // Draw grid (always visible)
             ctx.strokeStyle = '#333';
             for (let x = 0; x <= canvas.width; x += grid) {
@@ -230,14 +257,17 @@
                 if (!paused) requestAnimationFrame(gameLoop);
                 return;
             }
+            if (e.code === 'Space') {
+                if (gameOver) {
+                    resetGame();
+                }
+                return;
+            }
             if (paused || gameOver) return;
             if (key === 'a' && dx === 0) { dx = -grid; dy = 0; }
             else if (key === 'w' && dy === 0) { dx = 0; dy = -grid; }
             else if (key === 'd' && dx === 0) { dx = grid; dy = 0; }
             else if (key === 's' && dy === 0) { dx = 0; dy = grid; }
-            else if (e.code === 'Space') {
-                resetGame();
-            }
         });
 
         resetFood();
