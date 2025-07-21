@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Snake Game</title>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #222; }
+        canvas { background: #111; border: 2px solid #0f0; }
+        h1 { color: #0f0; text-align: center; }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="320" height="320"></canvas>
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const grid = 16;
+        let count = 0;
+        const speed = 6; // Lower is faster
+        let snake = [{x: 80, y: 80}];
+        let dx = grid;
+        let dy = 0;
+        let food = {x: 160, y: 160};
+        let gameOver = false;
+        let score = 0;
+        let bestScore = parseInt(localStorage.getItem('snakeBestScore')) || 0;
+
+        function resetGame() {
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('snakeBestScore', bestScore);
+            }
+            snake = [{x: 80, y: 80}];
+            dx = grid;
+            dy = 0;
+            gameOver = false;
+            score = 0;
+            resetFood();
+            count = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min) / grid) * grid + min;
+        }
+
+        function resetFood() {
+            food.x = getRandomInt(0, canvas.width - grid);
+            food.y = getRandomInt(0, canvas.height - grid);
+        }
+
+        function gameLoop() {
+            if (gameOver) return;
+            requestAnimationFrame(gameLoop);
+            if (++count < speed) return;
+            count = 0;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw grid (always visible)
+            ctx.strokeStyle = '#333';
+            for (let x = 0; x <= canvas.width; x += grid) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += grid) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Move snake
+            let head = {x: snake[0].x + dx, y: snake[0].y + dy};
+            snake.unshift(head);
+
+            // Check collision with food
+            if (head.x === food.x && head.y === food.y) {
+                resetFood();
+                score++;
+            } else {
+                snake.pop();
+            }
+
+            // Draw food
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(food.x, food.y, grid, grid);
+
+            // Draw snake
+            snake.forEach((segment, i) => {
+                // Head and tail are lime, body is green
+                if (i === 0 || i === snake.length - 1) {
+                    ctx.fillStyle = 'lime';
+                } else {
+                    ctx.fillStyle = '#0f0';
+                }
+                ctx.fillRect(segment.x, segment.y, grid, grid);
+                // Draw eyes and tongue for the head
+                if (i === 0) {
+                    // Eyes
+                    ctx.fillStyle = '#fff';
+                    let eyeOffsetX1 = 0, eyeOffsetY1 = 0, eyeOffsetX2 = 0, eyeOffsetY2 = 0;
+                    let tongueX = 0, tongueY = 0, tongueW = 0, tongueH = 0;
+                    if (dx > 0) { // right
+                        eyeOffsetX1 = grid - 6; eyeOffsetY1 = 5;
+                        eyeOffsetX2 = grid - 6; eyeOffsetY2 = grid - 10;
+                        tongueX = segment.x + grid; tongueY = segment.y + grid / 2 - 2;
+                        tongueW = 6; tongueH = 4;
+                    } else if (dx < 0) { // left
+                        eyeOffsetX1 = 2; eyeOffsetY1 = 5;
+                        eyeOffsetX2 = 2; eyeOffsetY2 = grid - 10;
+                        tongueX = segment.x - 6; tongueY = segment.y + grid / 2 - 2;
+                        tongueW = 6; tongueH = 4;
+                    } else if (dy > 0) { // down
+                        eyeOffsetX1 = 5; eyeOffsetY1 = grid - 6;
+                        eyeOffsetX2 = grid - 10; eyeOffsetY2 = grid - 6;
+                        tongueX = segment.x + grid / 2 - 2; tongueY = segment.y + grid;
+                        tongueW = 4; tongueH = 6;
+                    } else if (dy < 0) { // up
+                        eyeOffsetX1 = 5; eyeOffsetY1 = 2;
+                        eyeOffsetX2 = grid - 10; eyeOffsetY2 = 2;
+                        tongueX = segment.x + grid / 2 - 2; tongueY = segment.y - 6;
+                        tongueW = 4; tongueH = 6;
+                    }
+                    // Draw eyes
+                    ctx.beginPath();
+                    ctx.arc(segment.x + eyeOffsetX1, segment.y + eyeOffsetY1, 2, 0, 2 * Math.PI);
+                    ctx.arc(segment.x + eyeOffsetX2, segment.y + eyeOffsetY2, 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                    // Pupils
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(segment.x + eyeOffsetX1, segment.y + eyeOffsetY1, 1, 0, 2 * Math.PI);
+                    ctx.arc(segment.x + eyeOffsetX2, segment.y + eyeOffsetY2, 1, 0, 2 * Math.PI);
+                    ctx.fill();
+                    // Tongue
+                    ctx.fillStyle = '#f55';
+                    ctx.fillRect(tongueX, tongueY, tongueW, tongueH);
+                    // Forked tongue
+                    ctx.beginPath();
+                    if (dx !== 0) {
+                        ctx.moveTo(tongueX + (dx > 0 ? tongueW : 0), tongueY);
+                        ctx.lineTo(tongueX + (dx > 0 ? tongueW + 4 : -4), tongueY - 2);
+                        ctx.moveTo(tongueX + (dx > 0 ? tongueW : 0), tongueY + tongueH);
+                        ctx.lineTo(tongueX + (dx > 0 ? tongueW + 4 : -4), tongueY + tongueH + 2);
+                    } else {
+                        ctx.moveTo(tongueX, tongueY + (dy > 0 ? tongueH : 0));
+                        ctx.lineTo(tongueX - 2, tongueY + (dy > 0 ? tongueH + 4 : -4));
+                        ctx.moveTo(tongueX + tongueW, tongueY + (dy > 0 ? tongueH : 0));
+                        ctx.lineTo(tongueX + tongueW + 2, tongueY + (dy > 0 ? tongueH + 4 : -4));
+                    }
+                    ctx.strokeStyle = '#f55';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#333';
+                }
+                // Check collision with self
+                if (i > 0 && head.x === segment.x && head.y === segment.y) {
+                    gameOver = true;
+                }
+            });
+
+            // Check wall collision
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                gameOver = true;
+            }
+
+
+            // Display score and best score
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Score: ' + score, 10, 24);
+            ctx.fillText('Best: ' + bestScore, 10, 48);
+
+            // Display game over message
+            if (gameOver) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+                ctx.font = '18px Arial';
+                ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            const key = e.key.toLowerCase();
+            if (key === 'a' && dx === 0) { dx = -grid; dy = 0; }
+            else if (key === 'w' && dy === 0) { dx = 0; dy = -grid; }
+            else if (key === 'd' && dx === 0) { dx = grid; dy = 0; }
+            else if (key === 's' && dy === 0) { dx = 0; dy = grid; }
+            else if (e.code === 'Space') {
+                resetGame();
+            }
+        });
+
+        resetFood();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
