@@ -21,6 +21,7 @@
         let snake = [{x: 80, y: 80}];
         let dx = grid;
         let dy = 0;
+        let nextDirection = null;
         let food = {x: 160, y: 160};
         let gameOver = false;
         let paused = false;
@@ -113,6 +114,12 @@
                 ctx.stroke();
             }
 
+            // Apply next direction if set
+            if (nextDirection) {
+                dx = nextDirection.dx;
+                dy = nextDirection.dy;
+                nextDirection = null;
+            }
             // Move snake
             let head = {x: snake[0].x + dx, y: snake[0].y + dy};
             snake.unshift(head);
@@ -264,10 +271,12 @@
                 return;
             }
             if (paused || gameOver) return;
-            if (key === 'a' && dx === 0) { dx = -grid; dy = 0; }
-            else if (key === 'w' && dy === 0) { dx = 0; dy = -grid; }
-            else if (key === 'd' && dx === 0) { dx = grid; dy = 0; }
-            else if (key === 's' && dy === 0) { dx = 0; dy = grid; }
+            // Only allow one input per frame
+            if (nextDirection) return;
+            if (key === 'a' && dx === 0) { nextDirection = {dx: -grid, dy: 0}; }
+            else if (key === 'w' && dy === 0) { nextDirection = {dx: 0, dy: -grid}; }
+            else if (key === 'd' && dx === 0) { nextDirection = {dx: grid, dy: 0}; }
+            else if (key === 's' && dy === 0) { nextDirection = {dx: 0, dy: grid}; }
         });
 
         resetFood();
